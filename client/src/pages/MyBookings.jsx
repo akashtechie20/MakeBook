@@ -1,9 +1,8 @@
-// client/src/pages/MyBookings.jsx
 import React, { useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import toast from "react-hot-toast";
-import Title from "../components/Title"; // ✅ FIX: Import Title
-import { assets } from "../assets/assets"; // ✅ FIX: Import assets
+import Title from "../components/Title";
+import { assets } from "../assets/assets";
 
 const MyBookings = () => {
   const { axios, getToken, user } = useAppContext();
@@ -23,7 +22,26 @@ const MyBookings = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error?.response?.data?.message || error.message);
+      console.error("Error fetching bookings:", error);
+      toast.error(error.message);
+    }
+  };
+
+  const handlePayment = async (bookingId) => {
+    try {
+      const { data } = await axios.post(
+        "/api/bookings/stripe-payment",
+        { bookingId },
+        { headers: { Authorization: `Bearer ${await getToken()}` } }
+      );
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.message || "Payment failed");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error(error.message || "Payment could not be processed");
     }
   };
 
@@ -31,6 +49,7 @@ const MyBookings = () => {
     if (user) {
       fetchUserBookings();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   return (
@@ -57,7 +76,7 @@ const MyBookings = () => {
             {/* Hotel Details */}
             <div className="flex flex-col md:flex-row">
               <img
-                src={booking.room?.images?.[0]}
+                src={booking.room?.images?.[0] || assets.placeholderImage}
                 alt="hotel-img"
                 className="min-md:w-44 rounded shadow object-cover"
               />
@@ -114,7 +133,10 @@ const MyBookings = () => {
                 </p>
               </div>
               {!booking.isPaid && (
-                <button className="px-4 py-1.5 mt-4 text-xs border border-gray-400 rounded-full hover:bg-gray-50 transition-all cursor-pointer">
+                <button
+                  onClick={() => handlePayment(booking._id)}
+                  className="px-4 py-1.5 mt-4 text-xs border border-gray-400 rounded-full hover:bg-gray-50 transition-all cursor-pointer"
+                >
                   Pay Now
                 </button>
               )}
